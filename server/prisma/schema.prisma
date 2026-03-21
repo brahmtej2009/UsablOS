@@ -1,0 +1,49 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  wallpaper String   @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1920")
+  theme     String   @default("glass")
+  files     File[]
+  windows   Window[]
+  createdAt DateTime @default(now())
+}
+
+model File {
+  id        String   @id @default(uuid())
+  name      String
+  content   String   @default("")
+  type      String   @default("txt")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  parentId  String?
+  parent    File?    @relation("DirectoryHierarchy", fields: [parentId], references: [id])
+  children  File[]   @relation("DirectoryHierarchy")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Window {
+  id          String  @id @default(uuid())
+  appId       String
+  title       String
+  isOpen      Boolean @default(true)
+  isMinimized Boolean @default(false)
+  isMaximized Boolean @default(false)
+  x           Int     @default(100)
+  y           Int     @default(100)
+  width       Int     @default(600)
+  height      Int     @default(400)
+  zIndex      Int     @default(10)
+  userId      String
+  user        User    @relation(fields: [userId], references: [id])
+}
