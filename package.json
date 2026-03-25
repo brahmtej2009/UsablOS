@@ -1,13 +1,18 @@
 {
-  "name": "webos",
+  "name": "usablos",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -n \"WEB,SRV\" -c \"cyan,magenta\" \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "vite",
+    "dev:server": "npm run dev --prefix server",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build:server": "npm run build --prefix server",
+    "build:all": "npm run build && npm run build:server",
+    "start": "npm run start --prefix server",
+    "preview": "vite preview --port 5174",
+    "lint": "eslint ."
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -25,6 +30,8 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",

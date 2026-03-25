@@ -8,14 +8,19 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String
-  wallpaper String   @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1920")
-  theme     String   @default("glass")
-  files     File[]
-  windows   Window[]
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  username        String   @unique
+  password        String
+  wallpaper       String   @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1920")
+  theme           String   @default("glass")
+  screensaverType String   @default("particles")
+  brightness      Int      @default(100)
+  volume          Int      @default(50)
+  isBrightnessSynced Boolean @default(true)
+  desktopIcons    String   @default("[]")
+  files           File[]
+  windows         Window[]
+  createdAt       DateTime @default(now())
 }
 
 model File {
@@ -44,6 +49,8 @@ model Window {
   width       Int     @default(600)
   height      Int     @default(400)
   zIndex      Int     @default(10)
+  icon        String  @default("settings")
+  component   String  @default("settings")
   userId      String
   user        User    @relation(fields: [userId], references: [id])
 }

@@ -1,38 +1,65 @@
 import { useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { useOSStore } from '../store/useOSStore';
-
-const SOCKET_URL = 'http://localhost:3001';
+import { socket } from '../utils/socket';
 
 export const useSocketSync = () => {
-  const socketRef = useRef<Socket | null>(null);
-  const { user, isAuthenticated, updateWindowPosition, updateWindowSize } = useOSStore();
+  const { 
+    user, isAuthenticated, applyServerState, 
+    updateRemoteCursor, removeRemoteCursor,
+    setStartMenuOpen, setActionCenterOpen,
+    updateUser, updateWindowFromRemote
+  } = useOSStore();
+  const listenersAttached = useRef(false);
 
   useEffect(() => {
-    if (!isAuthenticated || !user.username) return;
+    if (!isAuthenticated || !user.id) return;
+    if (listenersAttached.current) return;
+    listenersAttached.current = true;
 
-    // Connect to server
-    socketRef.current = io(SOCKET_URL);
-    const socket = socketRef.current;
+    // Authoritative State Sync
+    const handleStateSync = (data: { windows: any[]; user?: any }) => {
+      applyServerState(data.windows || [], data.user);
+    };
 
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
-      socket.emit('join-session', user.username); // Join a room based on username for collaboration
-    });
+    // UI Popover Sync
+    const handleUISync = (data: { type: string; open: boolean }) => {
+      if (data.type === 'startMenu') setStartMenuOpen(data.open, true);
+      if (data.type === 'actionCenter') setActionCenterOpen(data.open, true);
+    };
 
-    // Listen for window sync events from other sessions on this account
-    socket.on('window-sync', (data) => {
-      if (data.type === 'move') {
-        updateWindowPosition(data.windowId, data.x, data.y);
-      } else if (data.type === 'resize') {
-        updateWindowSize(data.windowId, data.width, data.height);
-      }
-    });
+    // Brightness Sync
+    const handleBrightnessUpdate = (data: { brightness: number }) => {
+      updateUser({ brightness: data.brightness } as any);
+    };
+
+    // Real-time Window Drag/Resize Sync
+    const handleWindowSyncReceived = (data: any) => {
+      updateWindowFromRemote(data);
+    };
+
+    // Cursor Sync
+    const handleCursorSync = (data: any) => {
+      updateRemoteCursor(data.socketId, { username: data.username, x: data.x, y: data.y });
+    };
+    const handleCursorRemove = (socketId: string) => {
+      removeRemoteCursor(socketId);
+    };
+
+    socket.on('state-sync', handleStateSync);
+    socket.on('ui-sync-received', handleUISync);
+    socket.on('brightness-update', handleBrightnessUpdate);
+    socket.on('window-sync-received', handleWindowSyncReceived);
+    socket.on('cursor-sync', handleCursorSync);
+    socket.on('cursor-remove', handleCursorRemove);
 
     return () => {
-      socket.disconnect();
+      socket.off('state-sync', handleStateSync);
+      socket.off('ui-sync-received', handleUISync);
+      socket.off('brightness-update', handleBrightnessUpdate);
+      socket.off('window-sync-received', handleWindowSyncReceived);
+      socket.off('cursor-sync', handleCursorSync);
+      socket.off('cursor-remove', handleCursorRemove);
+      listenersAttached.current = false;
     };
-  }, [isAuthenticated, user.username, updateWindowPosition, updateWindowSize]);
-
-  return socketRef.current;
+  }, [isAuthenticated, user.id, applyServerState, updateRemoteCursor, removeRemoteCursor, setStartMenuOpen, setActionCenterOpen, updateUser, updateWindowFromRemote]);
 };

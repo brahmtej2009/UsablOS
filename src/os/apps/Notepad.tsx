@@ -1,109 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import { socket } from '../utils/socket';
+import React, { useState, useEffect, useRef } from 'react';
+import { Save, RefreshCw, FileText } from 'lucide-react';
 import { useOSStore } from '../store/useOSStore';
+import { socket } from '../utils/socket';
 
 const Notepad: React.FC<{ windowId: string }> = ({ windowId }) => {
-  const [text, setText] = useState('');
-  const [saving, setSaving] = useState(false);
-  const { user } = useOSStore();
-  const fileId = windowId.replace('notepad-', '');
-  const isRealFile = fileId.length > 5; // Basic check for UUID vs fallback ID
+    const fileId = windowId.startsWith('notepad-') && windowId !== 'notepad-1' ? windowId.replace('notepad-', '') : null;
+    const isNewFile = !fileId;
+    
+    const [content, setContent] = useState('');
+    const [fileName, setFileName] = useState('Untitled.txt');
+    const [loading, setLoading] = useState(!!fileId);
+    const [saving, setSaving] = useState(false);
+    const { user, showDialog } = useOSStore();
 
-  useEffect(() => {
-    if (isRealFile) {
-      const load = async () => {
-        const token = localStorage.getItem('webos_token');
-        const res = await fetch(`http://localhost:3001/api/files/${fileId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setText(data.content);
+    const isLight = user.theme === 'light';
+    const textColor = isLight ? '#0f172a' : 'white';
+    const inputBorder = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
+
+    const isInternalChange = useRef(false);
+
+    useEffect(() => {
+        if (fileId) {
+            loadFile();
         }
-      };
-      load();
-    }
-  }, [fileId, isRealFile]);
 
-  useEffect(() => {
-    const handleSync = (data: any) => {
-      if (data.windowId === windowId) {
-        setText(data.content);
+        const handleRemoteSync = (data: any) => {
+          if (data.fileId === fileId && !isInternalChange.current) {
+            setContent(data.content);
+          }
+        };
+
+        socket.on('notepad-sync', handleRemoteSync);
+        return () => { socket.off('notepad-sync', handleRemoteSync); };
+    }, [fileId]);
+
+    const loadFile = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('webos_token');
+            const res = await fetch(`/api/files/${fileId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const file = await res.json();
+                setContent(file.content || '');
+                setFileName(file.name);
+            }
+        } catch (e) { console.error(e); }
+        setLoading(false);
+    };
+
+    const handleContentChange = (newVal: string) => {
+      setContent(newVal);
+      if (fileId) {
+        isInternalChange.current = true;
+        socket.emit('notepad-update', { fileId, content: newVal, userId: user.id });
+        setTimeout(() => { isInternalChange.current = false; }, 50);
       }
     };
-    socket.on('notepad-sync', handleSync);
-    return () => {
-      socket.off('notepad-sync', handleSync);
+
+    const handleSave = async () => {
+        if (isNewFile) {
+          showDialog({
+            type: 'prompt',
+            title: 'Save File',
+            message: 'Enter a name for your file:',
+            value: fileName,
+            onConfirm: (val) => {
+              if (val) performSave(val);
+            }
+          });
+        } else {
+          performSave(fileName);
+        }
     };
-  }, [windowId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newText = e.target.value;
-    setText(newText);
-    socket.emit('notepad-update', { 
-      userId: user.username, 
-      windowId, 
-      content: newText 
-    });
-  };
+    const performSave = async (targetName: string) => {
+        setSaving(true);
+        try {
+            const token = localStorage.getItem('webos_token');
+            if (isNewFile) {
+                const res = await fetch('/api/files', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: targetName, content, type: 'txt' })
+                });
+                if (res.ok) {
+                   showDialog({ type: 'alert', title: 'File Saved', message: `"${targetName}" has been saved to the File Manager.` });
+                }
+            } else {
+                await fetch(`/api/files/${fileId}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content, name: targetName })
+                });
+            }
+        } catch (e) {
+            showDialog({ type: 'alert', title: 'Error', message: 'Failed to save file. Please try again.' });
+        }
+        setSaving(false);
+    };
 
-  const handleSave = async () => {
-    if (!isRealFile) return alert('Save feature only works for files created via Explorer');
-    setSaving(true);
-    try {
-      const token = localStorage.getItem('webos_token');
-      const res = await fetch(`http://localhost:3001/api/files/${fileId}`, {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ content: text })
-      });
-      if (!res.ok) alert('Failed to save file');
-    } catch (e) {
-      console.error(e);
-    }
-    setSaving(false);
-  };
+    if (loading) return <div style={{ padding: '20px', color: textColor }}>Loading document...</div>;
 
-  return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-       <textarea
-        value={text}
-        onChange={handleChange}
-        placeholder="Type something here..."
-        style={{
-            flex: 1,
-            background: 'rgba(0,0,0,0.2)',
-            color: 'white',
-            border: 'none',
-            outline: 'none',
-            padding: '10px',
-            borderRadius: '4px',
-            resize: 'none',
-            fontSize: '14px',
-            lineHeight: '1.5'
-        }}
-       />
-       <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button 
-              onClick={handleSave}
-              disabled={saving}
-              style={{ 
-                padding: '4px 12px', 
-                background: saving ? 'rgba(56, 189, 248, 0.5)' : 'var(--accent-primary)', 
-                border: 'none', 
-                borderRadius: '4px', 
-                color: 'white', 
-                cursor: saving ? 'wait' : 'pointer' 
-              }}
-            >
-                {saving ? 'Saving...' : 'Save'}
-            </button>
-       </div>
-    </div>
-  );
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: textColor }}>
+            {/* Toolbar */}
+            <div style={{ 
+                display: 'flex', alignItems: 'center', gap: '15px', padding: '10px 15px', 
+                borderBottom: `1px solid ${inputBorder}`, background: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)' 
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={16} />
+                    <input 
+                        value={fileName} 
+                        onChange={(e) => setFileName(e.target.value)}
+                        placeholder="Untitled.txt"
+                        style={{ background: 'none', border: 'none', color: 'inherit', fontWeight: 600, outline: 'none', width: '200px' }}
+                    />
+                </div>
+                <div style={{ flex: 1 }} />
+                <button 
+                    onClick={handleSave}
+                    disabled={saving}
+                    style={{ 
+                        display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent-primary)', 
+                        border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', opacity: saving ? 0.7 : 1 
+                    }}
+                >
+                    <Save size={16} /> {saving ? 'Saving...' : (isNewFile ? 'Save New' : 'Save')}
+                </button>
+                {fileId && (
+                    <button onClick={loadFile} title="Reload from server" style={{ background: 'none', border: 'none', color: textColor, padding: '4px', cursor: 'pointer', opacity: 0.6 }}>
+                        <RefreshCw size={16} />
+                    </button>
+                )}
+            </div>
+
+            <textarea
+                value={content}
+                onChange={(e) => handleContentChange(e.target.value)}
+                style={{
+                    flex: 1, border: 'none', resize: 'none', padding: '20px', 
+                    background: 'transparent', color: 'inherit', fontSize: '14px', lineHeight: '1.6', 
+                    fontFamily: 'Consolas, monaco, monospace', outline: 'none'
+                }}
+                spellCheck={false}
+            />
+        </div>
+    );
 };
 
 export default Notepad;
