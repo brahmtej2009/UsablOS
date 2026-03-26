@@ -40,14 +40,14 @@ if (HAS_DIST) {
 // --- Helper: broadcast full state to all sessions of a user ---
 const broadcastState = async (userId: string) => {
   const windows = await prisma.window.findMany({ where: { userId } });
-  const user = await prisma.user.findUnique({ 
-    where: { id: userId }, 
-    select: { 
-      id: true, username: true, wallpaper: true, theme: true, 
-      screensaverType: true, brightness: true, volume: true, isBrightnessSynced: true, desktopIcons: true 
-    } 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true, username: true, wallpaper: true, theme: true,
+      screensaverType: true, brightness: true, volume: true, isBrightnessSynced: true, desktopIcons: true
+    }
   });
-  
+
   if (user && typeof user.desktopIcons === 'string') {
     try { (user as any).desktopIcons = JSON.parse(user.desktopIcons); } catch { (user as any).desktopIcons = []; }
   }
@@ -113,7 +113,7 @@ app.put('/api/user/settings', authMiddleware, async (req: Request, res: Response
     if (volume !== undefined) update.volume = volume;
     if (isBrightnessSynced !== undefined) update.isBrightnessSynced = isBrightnessSynced;
     if (desktopIcons !== undefined) update.desktopIcons = JSON.stringify(desktopIcons);
-    
+
     await prisma.user.update({ where: { id: userId }, data: update });
     await broadcastState(userId);
     res.json({ success: true });
@@ -125,12 +125,12 @@ app.get('/api/files', authMiddleware, async (req: Request, res: Response, next: 
   try {
     const userId = (req as any).user.id;
     const { parentId, all } = req.query;
-    
+
     let where: any = { userId };
     if (all !== 'true') {
       where.parentId = parentId ? String(parentId) : null;
     }
-    
+
     const files = await prisma.file.findMany({ where });
     res.json(files);
   } catch (error) { next(error); }
@@ -164,8 +164,8 @@ app.put('/api/files/:id', authMiddleware, async (req: Request, res: Response, ne
     if (!file) return res.status(404).json({ error: 'File not found' });
     const updated = await prisma.file.update({
       where: { id },
-      data: { 
-        content: content !== undefined ? content : file.content, 
+      data: {
+        content: content !== undefined ? content : file.content,
         name: name || file.name,
         ...(parentId !== undefined && { parentId })
       }
@@ -189,14 +189,14 @@ app.get('/api/state', authMiddleware, async (req: Request, res: Response, next: 
   try {
     const userId = (req as any).user.id;
     const windows = await prisma.window.findMany({ where: { userId } });
-    const user = await prisma.user.findUnique({ 
-      where: { id: userId }, 
-      select: { 
-        id: true, username: true, wallpaper: true, theme: true, 
-        screensaverType: true, brightness: true, volume: true, isBrightnessSynced: true, desktopIcons: true 
-      } 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, username: true, wallpaper: true, theme: true,
+        screensaverType: true, brightness: true, volume: true, isBrightnessSynced: true, desktopIcons: true
+      }
     });
-    
+
     if (user && typeof user.desktopIcons === 'string') {
       try { (user as any).desktopIcons = JSON.parse(user.desktopIcons); } catch { (user as any).desktopIcons = []; }
     }
@@ -279,7 +279,7 @@ io.on('connection', (socket) => {
     socket.join(userId);
     socketToUser.set(socket.id, userId);
     console.log(`[SOCKET] ${socket.id} joined room: ${userId}`);
-    
+
     const windows = await prisma.window.findMany({ where: { userId } });
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { wallpaper: true, theme: true } }).catch(() => null);
     socket.emit('state-sync', { windows, user });
@@ -293,11 +293,11 @@ io.on('connection', (socket) => {
 
   // Cursor sync
   socket.on('cursor-move', (data: { userId: string; username: string; x: number; y: number }) => {
-    socket.to(data.userId).emit('cursor-sync', { 
-      socketId: socket.id, 
-      username: data.username, 
-      x: data.x, 
-      y: data.y 
+    socket.to(data.userId).emit('cursor-sync', {
+      socketId: socket.id,
+      username: data.username,
+      x: data.x,
+      y: data.y
     });
   });
 

@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Search, 
   Moon, 
   LogOut,
-  Battery,
   Volume2,
   Sun,
   RefreshCw,
@@ -15,10 +13,13 @@ import {
   Plus,
   Trash2,
   FileText,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOSStore } from '../store/useOSStore';
+import { useBattery } from '../hooks/useBattery';
+import { BatteryIcon } from './BatteryIcon';
 
 const Taskbar: React.FC = () => {
   const { 
@@ -45,18 +46,10 @@ const Taskbar: React.FC = () => {
 
   const [time, setTime] = useState(new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
+  const { level: batteryLevel, charging: isBatteryCharging, supported: batterySupported } = useBattery();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
-    if ('getBattery' in navigator) {
-      (navigator as any).getBattery().then((battery: any) => {
-        setBatteryLevel(Math.round(battery.level * 100));
-        battery.addEventListener('levelchange', () => {
-          setBatteryLevel(Math.round(battery.level * 100));
-        });
-      });
-    }
     return () => clearInterval(timer);
   }, []);
 
@@ -216,7 +209,7 @@ const Taskbar: React.FC = () => {
                     <div><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600 }}><Sun size={14} /> Brightness</div><span style={{ fontSize: '12px', opacity: 0.6 }}>{user.brightness}%</span></div><input type="range" min="10" max="100" value={user.brightness} onChange={(e) => updateUser({ brightness: parseInt(e.target.value) })} style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--accent-primary)' }} /></div>
                     <div><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600 }}><Volume2 size={14} /> Volume</div><span style={{ fontSize: '12px', opacity: 0.6 }}>{user.volume}%</span></div><input type="range" min="0" max="100" value={user.volume} onChange={(e) => updateUser({ volume: parseInt(e.target.value) })} style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--accent-primary)' }} /></div>
                  </div>
-                 <div style={{ marginTop: '24px', borderTop: `1px solid ${borderColor}`, paddingTop: '16px', display: 'flex', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}><Battery size={16} /><span style={{ fontWeight: 700 }}>{batteryLevel}%</span></div></div>
+                  <div style={{ marginTop: '24px', borderTop: `1px solid ${borderColor}`, paddingTop: '16px', display: 'flex', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}><BatteryIcon level={batteryLevel} charging={isBatteryCharging} size={16} /><span style={{ fontWeight: 700 }}>{batterySupported ? `${batteryLevel}%` : 'Desktop: 100%'}</span></div></div>
               </div>
             )}
           </motion.div>
@@ -268,7 +261,7 @@ const Taskbar: React.FC = () => {
         </div>
         <div style={{ width: '260px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
           <button onClick={() => { setActionCenterOpen(!(isActionCenterOpen && !isCalendarOpen)); setIsCalendarOpen(false); setStartMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: (isActionCenterOpen && !isCalendarOpen) ? (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)') : 'none', border: 'none', color: 'inherit', padding: '4px 12px', borderRadius: '20px', cursor: 'pointer', transition: 'background 0.2s' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Volume2 size={16} /><Sun size={16} />{batteryLevel !== null && <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Battery size={16} /><span style={{ fontSize: '11px', fontWeight: 600 }}>{batteryLevel}%</span></div>}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Volume2 size={16} /><Sun size={16} /><div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><BatteryIcon level={batteryLevel} charging={isBatteryCharging} size={16} /><span style={{ fontSize: '11px', fontWeight: 600 }}>{batterySupported ? `${batteryLevel}%` : '100%'}</span></div></div>
           </button>
           <button onClick={() => { setActionCenterOpen(!(isActionCenterOpen && isCalendarOpen)); setIsCalendarOpen(true); setStartMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', background: (isActionCenterOpen && isCalendarOpen) ? (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)') : 'none', border: 'none', color: 'inherit', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', transition: 'background 0.2s' }}>
             <div style={{ textAlign: 'right', lineHeight: 1.1 }}><div style={{ fontSize: '11px', fontWeight: 600 }}>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div><div style={{ fontSize: '10px', opacity: 0.6 }}>{time.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })}</div></div>

@@ -22,7 +22,11 @@ function clamp(value: number, min: number, max: number) {
 }
 
 const Window = React.forwardRef<HTMLDivElement, { window: WindowState }>(({ window }, ref) => {
-  const { user, closeWindow, focusWindow, minimizeWindow, maximizeWindow, activeWindowId, updateWindowPosition } = useOSStore();
+  const { 
+    user, closeWindow, focusWindow, minimizeWindow, maximizeWindow, 
+    activeWindowId, updateWindowPosition, updateWindowSize 
+  } = useOSStore();
+  const set = useOSStore.setState;
   const isFocused = activeWindowId === window.id;
   const isLight = user.theme === 'light';
 
@@ -49,6 +53,96 @@ const Window = React.forwardRef<HTMLDivElement, { window: WindowState }>(({ wind
     const clampedY = clamp(rawY, 0, vh - 36);
 
     updateWindowPosition(window.id, clampedX, clampedY);
+  };
+
+  const handleResize = (e: React.MouseEvent, type: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = window.width;
+    const startHeight = window.height;
+    const startXPos = window.x;
+    const startYPos = window.y;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      let newX = startXPos;
+      let newY = startYPos;
+
+      if (type.includes('e')) newWidth = startWidth + deltaX;
+      if (type.includes('w')) {
+        newWidth = startWidth - deltaX;
+        newX = startXPos + deltaX;
+      }
+      if (type.includes('s')) newHeight = startHeight + deltaY;
+      if (type.includes('n')) {
+        newHeight = startHeight - deltaY;
+        newY = startYPos + deltaY;
+      }
+
+      // Constraints
+      if (newWidth < 300) {
+        if (type.includes('w')) newX = startXPos + (startWidth - 300);
+        newWidth = 300;
+      }
+      if (newHeight < 200) {
+        if (type.includes('n')) newY = startYPos + (startHeight - 200);
+        newHeight = 200;
+      }
+
+      // Live Sync
+      socket.emit('window-sync', { 
+        userId: user.id, 
+        id: window.id, 
+        x: newX,
+        y: newY,
+        width: newWidth,
+        height: newHeight
+      });
+
+      // Local Update (Zustand setState)
+      set(state => ({
+        windows: state.windows.map(w => w.id === window.id ? { ...w, x: newX, y: newY, width: newWidth, height: newHeight } : w)
+      }));
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      
+      const latest = useOSStore.getState().windows.find(w => w.id === window.id);
+      if (latest) {
+        updateWindowPosition(window.id, latest.x, latest.y);
+        updateWindowSize(window.id, latest.width, latest.height);
+      }
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const ResizeHandle = ({ type, cursor }: { type: string, cursor: string }) => {
+    const style: React.CSSProperties = {
+      position: 'absolute',
+      zIndex: 100,
+      cursor: cursor,
+    };
+
+    if (type === 'n') { style.top = -4; style.left = 8; style.right = 8; style.height = 8; }
+    if (type === 's') { style.bottom = -4; style.left = 8; style.right = 8; style.height = 8; }
+    if (type === 'e') { style.right = -4; style.top = 8; style.bottom = 8; style.width = 8; }
+    if (type === 'w') { style.left = -4; style.top = 8; style.bottom = 8; style.width = 8; }
+    if (type === 'nw') { style.top = -4; style.left = -4; style.width = 12; style.height = 12; }
+    if (type === 'ne') { style.top = -4; style.right = -4; style.width = 12; style.height = 12; }
+    if (type === 'sw') { style.bottom = -4; style.left = -4; style.width = 12; style.height = 12; }
+    if (type === 'se') { style.bottom = -4; style.right = -4; style.width = 12; style.height = 12; }
+
+    return <div style={style} onMouseDown={(e) => handleResize(e, type)} />;
   };
 
   return (
@@ -87,7 +181,7 @@ const Window = React.forwardRef<HTMLDivElement, { window: WindowState }>(({ wind
         zIndex: window.zIndex,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: 'visible',
         border: isFocused ? '1px solid rgba(86, 156, 214, 0.6)' : '1px solid var(--glass-border)',
         boxShadow: isFocused ? '0 20px 60px rgba(0,0,0,0.6)' : 'var(--glass-shadow)',
         borderRadius: window.isMaximized ? '0px' : '8px',
@@ -95,6 +189,21 @@ const Window = React.forwardRef<HTMLDivElement, { window: WindowState }>(({ wind
         background: 'var(--window-bg-inactive)',
       }}
     >
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: window.isMaximized ? '0px' : '8px', border: 'inherit', background: 'inherit', zIndex: -1 }} />
+      
+      {!window.isMaximized && (
+        <>
+          <ResizeHandle type="n" cursor="ns-resize" />
+          <ResizeHandle type="s" cursor="ns-resize" />
+          <ResizeHandle type="e" cursor="ew-resize" />
+          <ResizeHandle type="w" cursor="ew-resize" />
+          <ResizeHandle type="nw" cursor="nwse-resize" />
+          <ResizeHandle type="ne" cursor="nesw-resize" />
+          <ResizeHandle type="sw" cursor="nesw-resize" />
+          <ResizeHandle type="se" cursor="nwse-resize" />
+        </>
+      )}
+
       <div
         className="window-header"
         onPointerDown={(e) => { focusWindow(window.id); dragControls.start(e); }}

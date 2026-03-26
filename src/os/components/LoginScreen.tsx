@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOSStore } from '../store/useOSStore';
-import { ArrowRight, Wifi, Battery, Power } from 'lucide-react';
+import { useBattery } from '../hooks/useBattery';
+import { BatteryIcon } from './BatteryIcon';
+import { ArrowRight, Wifi, Power } from 'lucide-react';
 
 const LoginScreen: React.FC = () => {
   const [locked, setLocked] = useState(true);
@@ -12,6 +14,7 @@ const LoginScreen: React.FC = () => {
   const [time, setTime] = useState(new Date());
   
   const { login, user } = useOSStore();
+  const { level: batteryLevel, charging: isBatteryCharging, supported: batterySupported } = useBattery();
   const touchStart = useRef<number | null>(null);
 
   useEffect(() => {
@@ -240,7 +243,10 @@ const LoginScreen: React.FC = () => {
 
         <div style={{ display: 'flex', gap: '25px', alignItems: 'center', opacity: 0.8, position: 'absolute', bottom: '40px', right: '40px' }}>
           <Wifi size={24} style={{ cursor: 'pointer' }} />
-          <Battery size={24} style={{ cursor: 'pointer' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+            <BatteryIcon level={batteryLevel} charging={isBatteryCharging} size={24} />
+            <span style={{ fontSize: '14px', fontWeight: 600 }}>{batterySupported ? `${batteryLevel}%` : '100%'}</span>
+          </div>
           <Power size={24} style={{ cursor: 'pointer' }} onClick={() => setLocked(true)} />
         </div>
       </div>
