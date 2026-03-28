@@ -1,5 +1,8 @@
+Shipwright/Verfier Notice: To verify sidequest, please read the message below at the end of this readme.
+
 # UsablOS
 A web based OS, which is also a usable cloud machine! Made for one of my hack club projects!
+
 
 
 ## For Voters / Shipwrights
@@ -85,6 +88,8 @@ This starts the Express server in production mode at:
 ## WEBOS ACHIEVEMENT 
 This project is submitted for Web OS achievement for hack club.
 
+## Challenger Space Mission
+This project is submitted for Web OS achievement for hack club. Please open the cosmos app for verification of achievement.
 ## 📝 License
 
 MIT

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useOSStore } from '../store/useOSStore';
 import { motion } from 'framer-motion';
-import { Settings, Calculator, Terminal, Globe, Folder, FileText, Cpu, Music, Image as ImageIcon } from 'lucide-react';
+import { Settings, Calculator, Terminal, Globe, Folder, FileText, Cpu, Music, Image as ImageIcon, Rocket } from 'lucide-react';
 
 // The master registry of ALL apps available in the OS
 export interface AppDefinition {
@@ -18,6 +18,7 @@ export const ALL_APPS: AppDefinition[] = [
   { id: 'file-explorer-1', title: 'Files', icon: 'folder', component: 'file-explorer', description: 'Manage your files' },
   { id: 'notepad-1', title: 'Notepad', icon: 'file-text', component: 'notepad', description: 'Edit text files' },
   { id: 'paint-1', title: 'Paint', icon: 'image', component: 'paint', description: 'Draw and edit images' },
+  { id: 'cosmos-1', title: 'Cosmos', icon: 'rocket', component: 'cosmos', description: 'Explore the universe' },
 ];
 
 // Map string icon name → React element
@@ -34,6 +35,7 @@ export const getAppIcon = (iconName: string, size = 24, color?: string): React.R
     case 'cpu': return <Cpu size={s} color={c} />;
     case 'music': return <Music size={s} color={c} />;
     case 'image': return <ImageIcon size={s} color={c} />;
+    case 'rocket': return <Rocket size={s} color={c} />;
     default: return <Folder size={s} color={c} />;
   }
 };

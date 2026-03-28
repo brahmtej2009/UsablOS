@@ -15,6 +15,7 @@ import {
   FileText,
   Image as ImageIcon,
   Search,
+  Rocket,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOSStore } from '../store/useOSStore';
@@ -66,6 +67,7 @@ const Taskbar: React.FC = () => {
     { id: 'notepad-1', title: 'Notepad', iconName: 'file-text', component: 'notepad' },
     { id: 'paint-1', title: 'Paint', iconName: 'image', component: 'paint' },
     { id: 'calculator-1', title: 'Calculator', iconName: 'calculator', component: 'calculator' },
+    { id: 'cosmos-1', title: 'Cosmos', iconName: 'rocket', component: 'cosmos' },
   ];
 
   const renderIcon = (iconName: string, size = 24) => {
@@ -77,6 +79,7 @@ const Taskbar: React.FC = () => {
       case 'calendar': return <CalendarIcon size={size} color={iconColor} />;
       case 'file-text': return <FileText size={size} color={iconColor} />;
       case 'image': return <ImageIcon size={size} color={iconColor} />;
+      case 'rocket': return <Rocket size={size} color={iconColor} />;
       default: return <img src={`/icons/${iconName}.png`} style={{ width: `${size}px`, height: `${size}px`, filter: (isLight && iconName === 'chrome') ? 'none' : (isLight ? 'invert(1)' : 'none') }} alt="" onError={(e) => (e.target as any).src = '/logo.png' } />;
     }
   };
@@ -261,7 +264,16 @@ const Taskbar: React.FC = () => {
         </div>
         <div style={{ width: '260px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
           <button onClick={() => { setActionCenterOpen(!(isActionCenterOpen && !isCalendarOpen)); setIsCalendarOpen(false); setStartMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: (isActionCenterOpen && !isCalendarOpen) ? (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)') : 'none', border: 'none', color: 'inherit', padding: '4px 12px', borderRadius: '20px', cursor: 'pointer', transition: 'background 0.2s' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Volume2 size={16} /><Sun size={16} /><div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><BatteryIcon level={batteryLevel} charging={isBatteryCharging} size={16} /><span style={{ fontSize: '11px', fontWeight: 600 }}>{batterySupported ? `${batteryLevel}%` : '100%'}</span></div></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <Volume2 size={16} style={{ marginRight: '6px' }} />
+              <Sun size={16} style={{ marginRight: '6px' }} />
+              <BatteryIcon 
+                level={batteryLevel} 
+                charging={isBatteryCharging} 
+                size={16} 
+                showLevel={true} 
+              />
+            </div>
           </button>
           <button onClick={() => { setActionCenterOpen(!(isActionCenterOpen && isCalendarOpen)); setIsCalendarOpen(true); setStartMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', background: (isActionCenterOpen && isCalendarOpen) ? (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)') : 'none', border: 'none', color: 'inherit', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', transition: 'background 0.2s' }}>
             <div style={{ textAlign: 'right', lineHeight: 1.1 }}><div style={{ fontSize: '11px', fontWeight: 600 }}>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div><div style={{ fontSize: '10px', opacity: 0.6 }}>{time.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })}</div></div>

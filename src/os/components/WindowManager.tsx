@@ -13,6 +13,7 @@ const appMap: Record<string, React.LazyExoticComponent<any>> = {
   calculator: lazy(() => import('../apps/Calculator')),
   'file-explorer': lazy(() => import('../apps/FileExplorer')),
   paint: lazy(() => import('../apps/Paint')),
+  cosmos: lazy(() => import('../apps/Cosmos')),
 };
 
 const TASKBAR_HEIGHT = 48;
